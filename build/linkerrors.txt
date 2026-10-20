@@ -1,0 +1,11 @@
+================================================================================
+Linker Errors
+Generated: 2026-10-20T16:47:18.723Z
+Total Errors: 2
+================================================================================
+
+[LNK4075] (MSVC)
+se omite '/INCREMENTAL' debido a la especificación '/LTCG' [C:\Users\Administrador\Desktop\ASI DC1\build\DinoCrisisCutsceneSkipper.vcxproj]
+
+[LNK4098] (MSVC)
+la biblioteca predeterminada'LIBCMT' entra en conflicto con otras bibliotecas; use la biblioteca /NODEFAULTLIB:biblioteca [C:\Users\Administrador\Desktop\ASI DC1\build\DinoCrisisCutsceneSkipper.vcxproj]

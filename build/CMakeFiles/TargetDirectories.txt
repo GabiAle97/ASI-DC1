@@ -1,0 +1,3 @@
+C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/DinoCrisisCutsceneSkipper.dir
+C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/ZERO_CHECK.dir

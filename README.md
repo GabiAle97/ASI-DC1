@@ -1,0 +1,12 @@
+build/
+.vscode/.cmakecache/
+CMakeCache.txt
+CMakeFiles/
+*.asi
+*.dll
+*.pdb
+*.obj
+*.ilk
+*.exp
+*.lib
+.DS_Store
