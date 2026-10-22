@@ -91,7 +91,7 @@ events:
       The output was:
       0
       Versi├│n de MSBuild 18.12.0-1.26475.12+694f366b5 para .NET Framework
-      Compilaci├│n iniciada a las 20/10/2026 13:47:13.
+      Compilaci├│n iniciada a las 20/10/2026 19:02:36.
       
       Proyecto "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\4.5.0-rc1\\CompilerIdCXX\\CompilerIdCXX.vcxproj" en nodo 1 (destinos predeterminados).
       PrepareForBuild:
@@ -120,7 +120,7 @@ events:
           0 Advertencia(s)
           0 Errores
       
-      Tiempo transcurrido 00:00:00.87
+      Tiempo transcurrido 00:00:00.64
       
       
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
@@ -820,8 +820,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg"
-      binary: "C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg"
+      source: "C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6"
+      binary: "C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /GR /EHsc"
       CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
@@ -832,39 +832,39 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: false
       stdout: |
-        Change Dir: 'C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg'
+        Change Dir: 'C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6'
         
-        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Insiders/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_01a72.vcxproj /p:Configuration=Debug /p:Platform=win32 /p:VisualStudioVersion=18.0 /v:n
+        Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Insiders/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_b718a.vcxproj /p:Configuration=Debug /p:Platform=win32 /p:VisualStudioVersion=18.0 /v:n
         Versi├│n de MSBuild 18.12.0-1.26475.12+694f366b5 para .NET Framework
-        Compilaci├│n iniciada a las 20/10/2026 13:47:15.
+        Compilaci├│n iniciada a las 20/10/2026 19:02:37.
         
-        Proyecto "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-q6ijsg\\cmTC_01a72.vcxproj" en nodo 1 (destinos predeterminados).
+        Proyecto "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-agarq6\\cmTC_b718a.vcxproj" en nodo 1 (destinos predeterminados).
         PrepareForBuild:
           La salida estructurada est├í habilitada. El formato del diagn├│stico del compilador reflejar├í la jerarqu├¡a de errores. Consulte https://aka.ms/cpp/structured-output para obtener m├ís detalles.
-          Creando directorio "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-q6ijsg\\Debug\\".
-          Creando directorio "cmTC_01a72.dir\\Debug\\cmTC_01a72.tlog\\".
+          Creando directorio "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-agarq6\\Debug\\".
+          Creando directorio "cmTC_b718a.dir\\Debug\\cmTC_b718a.tlog\\".
         InitializeBuildStatus:
-          Se crear├í "cmTC_01a72.dir\\Debug\\cmTC_01a72.tlog\\unsuccessfulbuild" porque se especific├│ "AlwaysCreate".
-          Aplicando tarea Touch a "cmTC_01a72.dir\\Debug\\cmTC_01a72.tlog\\unsuccessfulbuild".
+          Se crear├í "cmTC_b718a.dir\\Debug\\cmTC_b718a.tlog\\unsuccessfulbuild" porque se especific├│ "AlwaysCreate".
+          Aplicando tarea Touch a "cmTC_b718a.dir\\Debug\\cmTC_b718a.tlog\\unsuccessfulbuild".
         ClCompile:
-          C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_01a72.dir\\Debug\\\\" /Fd"cmTC_01a72.dir\\Debug\\vc145.pdb" /external:W1 /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.5\\Modules\\CMakeCXXCompilerABI.cpp"
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_b718a.dir\\Debug\\\\" /Fd"cmTC_b718a.dir\\Debug\\vc145.pdb" /external:W1 /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.5\\Modules\\CMakeCXXCompilerABI.cpp"
           Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37025 for x86
           (C) Microsoft Corporation. Todos los derechos reservados.
-          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_01a72.dir\\Debug\\\\" /Fd"cmTC_01a72.dir\\Debug\\vc145.pdb" /external:W1 /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.5\\Modules\\CMakeCXXCompilerABI.cpp"
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /Oy- /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_b718a.dir\\Debug\\\\" /Fd"cmTC_b718a.dir\\Debug\\vc145.pdb" /external:W1 /TP /analyze- /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.5\\Modules\\CMakeCXXCompilerABI.cpp"
           CMakeCXXCompilerABI.cpp
         Link:
-          C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\link.exe /OUT:"C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-q6ijsg\\Debug\\cmTC_01a72.exe" /INCREMENTAL /ILK:"cmTC_01a72.dir\\Debug\\cmTC_01a72.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg/Debug/cmTC_01a72.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg/Debug/cmTC_01a72.lib" /MACHINE:X86  /machine:X86 cmTC_01a72.dir\\Debug\\CMakeCXXCompilerABI.obj
-          cmTC_01a72.vcxproj -> C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-q6ijsg\\Debug\\cmTC_01a72.exe
+          C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\link.exe /OUT:"C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-agarq6\\Debug\\cmTC_b718a.exe" /INCREMENTAL /ILK:"cmTC_b718a.dir\\Debug\\cmTC_b718a.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6/Debug/cmTC_b718a.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6/Debug/cmTC_b718a.lib" /MACHINE:X86  /machine:X86 cmTC_b718a.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_b718a.vcxproj -> C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-agarq6\\Debug\\cmTC_b718a.exe
         FinalizeBuildStatus:
-          Se eliminar├í el archivo "cmTC_01a72.dir\\Debug\\cmTC_01a72.tlog\\unsuccessfulbuild".
-          Aplicando tarea Touch a "cmTC_01a72.dir\\Debug\\cmTC_01a72.tlog\\cmTC_01a72.lastbuildstate".
-        Compilaci├│n del proyecto terminada "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-q6ijsg\\cmTC_01a72.vcxproj" (destinos predeterminados).
+          Se eliminar├í el archivo "cmTC_b718a.dir\\Debug\\cmTC_b718a.tlog\\unsuccessfulbuild".
+          Aplicando tarea Touch a "cmTC_b718a.dir\\Debug\\cmTC_b718a.tlog\\cmTC_b718a.lastbuildstate".
+        Compilaci├│n del proyecto terminada "C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-agarq6\\cmTC_b718a.vcxproj" (destinos predeterminados).
         
         Compilaci├│n correcta.
             0 Advertencia(s)
             0 Errores
         
-        Tiempo transcurrido 00:00:00.92
+        Tiempo transcurrido 00:00:00.63
         
       exitCode: 0
   -
@@ -877,7 +877,7 @@ events:
       Parsed CXX implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)(\\.exe)?"?( |$)]
         linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
-        link line: [  C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\link.exe /OUT:"C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-q6ijsg\\Debug\\cmTC_01a72.exe" /INCREMENTAL /ILK:"cmTC_01a72.dir\\Debug\\cmTC_01a72.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg/Debug/cmTC_01a72.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-q6ijsg/Debug/cmTC_01a72.lib" /MACHINE:X86  /machine:X86 cmTC_01a72.dir\\Debug\\CMakeCXXCompilerABI.obj] ==> linker [C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\link.exe]
+        link line: [  C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\link.exe /OUT:"C:\\Users\\Administrador\\Desktop\\ASI DC1\\build\\CMakeFiles\\CMakeScratch\\TryCompile-agarq6\\Debug\\cmTC_b718a.exe" /INCREMENTAL /ILK:"cmTC_b718a.dir\\Debug\\cmTC_b718a.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6/Debug/cmTC_b718a.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"C:/Users/Administrador/Desktop/ASI DC1/build/CMakeFiles/CMakeScratch/TryCompile-agarq6/Debug/cmTC_b718a.lib" /MACHINE:X86  /machine:X86 cmTC_b718a.dir\\Debug\\CMakeCXXCompilerABI.obj] ==> linker [C:\\Program Files\\Microsoft Visual Studio\\18\\Insiders\\VC\\Tools\\MSVC\\14.52.37025\\bin\\HostX86\\x86\\link.exe]
         linker tool for 'CXX': C:/Program Files/Microsoft Visual Studio/18/Insiders/VC/Tools/MSVC/14.52.37025/bin/HostX86/x86/link.exe 
         implicit libs: []
         implicit objs: []

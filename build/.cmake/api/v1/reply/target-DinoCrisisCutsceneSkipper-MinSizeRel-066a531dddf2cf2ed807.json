@@ -2,13 +2,13 @@
 	"artifacts" : 
 	[
 		{
-			"path" : "RelWithDebInfo/DinoCrisisCutsceneSkipper.asi"
+			"path" : "MinSizeRel/DinoCrisisCutsceneSkipper.asi"
 		},
 		{
-			"path" : "RelWithDebInfo/DinoCrisisCutsceneSkipper.lib"
+			"path" : "MinSizeRel/DinoCrisisCutsceneSkipper.lib"
 		},
 		{
-			"path" : "RelWithDebInfo/DinoCrisisCutsceneSkipper.pdb"
+			"path" : "MinSizeRel/DinoCrisisCutsceneSkipper.pdb"
 		}
 	],
 	"backtrace" : 1,
@@ -34,31 +34,31 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 10,
+				"line" : 14,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 28,
+				"line" : 32,
 				"parent" : 0
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 16,
+				"line" : 20,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 27,
+				"line" : 31,
 				"parent" : 0
 			},
 			{
 				"command" : 4,
 				"file" : 0,
-				"line" : 12,
+				"line" : 16,
 				"parent" : 0
 			}
 		]
@@ -74,7 +74,7 @@
 			"compileCommandFragments" : 
 			[
 				{
-					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /Zi /O2 /Ob1 /DNDEBUG -std:c++17 -MD"
+					"fragment" : "/DWIN32 /D_WINDOWS /GR /EHsc /O1 /Ob1 /DNDEBUG -std:c++17 -MT"
 				},
 				{
 					"backtrace" : 4,
@@ -125,7 +125,7 @@
 		"commandFragments" : 
 		[
 			{
-				"fragment" : "/machine:X86 /debug /INCREMENTAL",
+				"fragment" : "/machine:X86 /INCREMENTAL:NO",
 				"role" : "flags"
 			},
 			{

@@ -2,10 +2,14 @@ cmake_minimum_required(VERSION 3.15)
 project(DinoCrisisCutsceneSkipper LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
     message(FATAL_ERROR "Debe ser Win32")
 endif()
+
+# Forzar runtime estático
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 add_library(${PROJECT_NAME} SHARED src/dllmain.cpp)
 

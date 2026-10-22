@@ -1,4 +1,5 @@
 #include <Windows.h>
+#include <algorithm>
 #include <thread>
 #include <atomic>
 #include <chrono>
@@ -13,6 +14,8 @@
 // ============================================================
 
 static std::atomic<float> g_speed{1.0f};
+static std::atomic<float> g_cutscene_speed{1.0f};
+static std::atomic<float> g_doorskip_speed{1.0f};
 static DWORD g_baseTime = 0;
 static LARGE_INTEGER g_baseQPC = {0};
 
@@ -49,6 +52,20 @@ void InitSpeedhack() {
 
 void SetGameSpeed(float multiplier) {
     g_speed = multiplier;
+}
+
+void RefreshGameSpeed() {
+    g_speed = (std::max)(g_cutscene_speed.load(), g_doorskip_speed.load());
+}
+
+void SetCutsceneSpeed(float multiplier) {
+    g_cutscene_speed = multiplier;
+    RefreshGameSpeed();
+}
+
+void SetDoorSkipSpeed(float multiplier) {
+    g_doorskip_speed = multiplier;
+    RefreshGameSpeed();
 }
 
 // ============================================================
@@ -126,6 +143,10 @@ constexpr uintptr_t timer_addr            = 0x006DD8F4;
 static std::atomic<bool> g_running{false};
 static std::atomic<bool> g_enabled{false};
 static std::atomic<bool> g_doorskip{false};
+static std::atomic<bool> g_f2_pressed{false};
+static std::atomic<bool> g_f11_pressed{false};
+static std::atomic<DWORD> g_hotkey_thread_id{0};
+static HMODULE g_module_handle = nullptr;
 
 static int saved_x = 0;
 static int saved_y = 0;
@@ -311,19 +332,19 @@ void SkipCutsceneLogic() {
                 timer_start_value = ReadInteger(timer_addr);
                 real_time_start = GetTickCountSafe();
             }
-            SetGameSpeed(speedhack_multiplier);
+            SetCutsceneSpeed(speedhack_multiplier);
             if (room_id == 0x0508 && action_done_bis == 6) {
                 if (puzzle_cicle < 4) {
                     puzzle_cicle++;
                 } else {
-                    SetGameSpeed(1.0f);
+                    SetCutsceneSpeed(1.0f);
                 }
             }
             if (room_id == 0x0609 && action_done_bis == 4) {
                 if (puzzle_cicle < 6) {
                     puzzle_cicle++;
                 } else {
-                    SetGameSpeed(1.0f);
+                    SetCutsceneSpeed(1.0f);
                 }
             }
         } else {
@@ -334,7 +355,7 @@ void SkipCutsceneLogic() {
                 uint32_t final_value = timer_start_value + elapsed_units + 30;
                 WriteInteger(timer_addr, final_value);
                 timer_enabled = false;
-                SetGameSpeed(1.0f);
+                SetCutsceneSpeed(1.0f);
                 puzzle_cicle = 0;
             }
         }
@@ -627,37 +648,28 @@ void SkipCutsceneLogic() {
 }
 
 // ============================================================
-// Door skip thread
+// Door skip (integrated into main loop)
 // ============================================================
 
-void DoorSkipThread() {
-    int cicle = 0;
-    float previous_speed = 1.0f;
+static int door_cicle = 0;
 
-    while (g_doorskip && g_running) {
-        uint32_t door_event = ReadInteger(doorskip_addr);
-        uint16_t room_id = ReadSmallInteger(room_addr);
-
-        if (door_event == 1 && room_id != 0x0000) {
-            if (cicle < 3) {
-                SetGameSpeed(60.0f);
-                cicle++;
-            } else {
-                SetGameSpeed(1.0f);
-            }
-        } else {
-            cicle = 0;
-            // Solo restaurar si no estamos en una aceleración de cutscene
-            if (g_speed.load() == 60.0f) {
-                SetGameSpeed(1.0f);
-            }
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+void ProcessDoorSkip() {
+    if (!g_doorskip) {
+        door_cicle = 0;
+        SetDoorSkipSpeed(1.0f);
+        return;
     }
 
-    // Al desactivar doorskip, asegurar velocidad normal
-    SetGameSpeed(1.0f);
+    uint32_t door_event = ReadInteger(doorskip_addr);
+    uint16_t room_id = ReadSmallInteger(room_addr);
+
+    if (door_event == 1 && room_id != 0x0000) {
+        door_cicle = 0;
+        SetDoorSkipSpeed(8.0f);
+    } else {
+        door_cicle = 0;
+        SetDoorSkipSpeed(1.0f);
+    }
 }
 
 // ============================================================
@@ -666,34 +678,170 @@ void DoorSkipThread() {
 
 void WorkerThread() {
     while (g_running) {
-        SkipCutsceneLogic();
+        if (g_enabled) {
+            SkipCutsceneLogic();
+        } else {
+            timer_enabled = false;
+            SetCutsceneSpeed(1.0f);
+        }
+        ProcessDoorSkip();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
 void HotkeyThread() {
-    bool f2_was_down = false;
-    bool f11_was_down = false;
+    // Crear la cola de mensajes antes de publicar el ID del hilo.
+    MSG message{};
+    PeekMessageW(&message, nullptr, WM_USER, WM_USER, PM_NOREMOVE);
+    g_hotkey_thread_id = GetCurrentThreadId();
 
-    while (g_running) {
-        bool f2_down = (GetAsyncKeyState(VK_F2) & 0x8000) != 0;
-        bool f11_down = (GetAsyncKeyState(VK_F11) & 0x8000) != 0;
+    HHOOK keyboard_hook = SetWindowsHookExW(
+        WH_KEYBOARD_LL,
+        [](int code, WPARAM w_param, LPARAM l_param) -> LRESULT {
+            if (code == HC_ACTION) {
+                const auto* key = reinterpret_cast<const KBDLLHOOKSTRUCT*>(l_param);
+                const bool key_up = (key->flags & LLKHF_UP) != 0;
 
-        if (f2_down && !f2_was_down) {
-            g_enabled = !g_enabled;
-        }
-        if (f11_down && !f11_was_down) {
-            g_doorskip = !g_doorskip;
-            if (g_doorskip) {
-                std::thread(DoorSkipThread).detach();
+                if (key->vkCode == VK_F2) {
+                    if (key_up) {
+                        g_f2_pressed = false;
+                    } else if (!g_f2_pressed.exchange(true)) {
+                        g_enabled = !g_enabled.load();
+                    }
+                } else if (key->vkCode == VK_F11) {
+                    if (key_up) {
+                        g_f11_pressed = false;
+                    } else if (!g_f11_pressed.exchange(true)) {
+                        const bool enable_doorskip = !g_doorskip.load();
+                        g_doorskip = enable_doorskip;
+                        if (!enable_doorskip) {
+                            SetDoorSkipSpeed(1.0f);
+                        }
+                    }
+                }
             }
+            return CallNextHookEx(nullptr, code, w_param, l_param);
+        },
+        g_module_handle,
+        0);
+
+    if (keyboard_hook) {
+        while (g_running && GetMessageW(&message, nullptr, 0, 0) > 0) {
+            TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+        UnhookWindowsHookEx(keyboard_hook);
+    }
+    g_hotkey_thread_id = 0;
+}
+
+// ============================================================
+// On-screen status overlay
+// ============================================================
+
+static constexpr wchar_t OVERLAY_CLASS_NAME[] = L"DinoCrisisSkipStatusOverlay";
+static HWND g_overlay_window = nullptr;
+
+BOOL CALLBACK FindGameWindowCallback(HWND window, LPARAM parameter) {
+    DWORD process_id = 0;
+    GetWindowThreadProcessId(window, &process_id);
+
+    const LONG_PTR extended_style = GetWindowLongPtrW(window, GWL_EXSTYLE);
+    if (process_id == GetCurrentProcessId() && window != g_overlay_window &&
+        IsWindowVisible(window) && GetWindow(window, GW_OWNER) == nullptr &&
+        (extended_style & WS_EX_TOOLWINDOW) == 0) {
+        *reinterpret_cast<HWND*>(parameter) = window;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+LRESULT CALLBACK OverlayWindowProc(HWND window, UINT message, WPARAM w_param, LPARAM l_param) {
+    switch (message) {
+    case WM_TIMER: {
+        if (!g_running) {
+            PostQuitMessage(0);
+            return 0;
+        }
+        HWND game_window = nullptr;
+        EnumWindows(FindGameWindowCallback, reinterpret_cast<LPARAM>(&game_window));
+        HWND foreground_window = GetForegroundWindow();
+        DWORD foreground_process_id = 0;
+        if (foreground_window) {
+            GetWindowThreadProcessId(foreground_window, &foreground_process_id);
+        }
+        if (!game_window || IsIconic(game_window) || !IsWindowVisible(game_window) ||
+            foreground_process_id != GetCurrentProcessId()) {
+            ShowWindow(window, SW_HIDE);
+            return 0;
         }
 
-        f2_was_down = f2_down;
-        f11_was_down = f11_down;
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        POINT client_origin{0, 0};
+        if (ClientToScreen(game_window, &client_origin)) {
+            SetWindowPos(window, HWND_TOPMOST, client_origin.x + 12, client_origin.y + 12,
+                0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        }
+        InvalidateRect(window, nullptr, TRUE);
+        return 0;
     }
+    case WM_PAINT: {
+        PAINTSTRUCT paint{};
+        HDC dc = BeginPaint(window, &paint);
+        SetBkMode(dc, TRANSPARENT);
+
+        HFONT font = CreateFontW(18, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+            DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+            ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
+        HGDIOBJ previous_font = SelectObject(dc, font);
+
+        SetTextColor(dc, g_enabled.load() ? RGB(80, 255, 120) : RGB(190, 190, 190));
+        TextOutW(dc, 0, 0, g_enabled.load() ? L"CUTSCENE SKIP: ON" : L"CUTSCENE SKIP: OFF",
+            g_enabled.load() ? 17 : 18);
+        SetTextColor(dc, g_doorskip.load() ? RGB(80, 255, 120) : RGB(190, 190, 190));
+        TextOutW(dc, 0, 22, g_doorskip.load() ? L"DOORSKIP: ON" : L"DOORSKIP: OFF",
+            g_doorskip.load() ? 12 : 13);
+
+        SelectObject(dc, previous_font);
+        DeleteObject(font);
+        EndPaint(window, &paint);
+        return 0;
+    }
+    case WM_DESTROY:
+        KillTimer(window, 1);
+        return 0;
+    default:
+        return DefWindowProcW(window, message, w_param, l_param);
+    }
+}
+
+void OverlayThread() {
+    HINSTANCE instance = GetModuleHandleW(nullptr);
+    WNDCLASSEXW window_class{};
+    window_class.cbSize = sizeof(window_class);
+    window_class.lpfnWndProc = OverlayWindowProc;
+    window_class.hInstance = instance;
+    window_class.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
+    window_class.lpszClassName = OVERLAY_CLASS_NAME;
+    RegisterClassExW(&window_class);
+
+    g_overlay_window = CreateWindowExW(
+        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        OVERLAY_CLASS_NAME, L"Dino Crisis skip status", WS_POPUP,
+        0, 0, 260, 48, nullptr, nullptr, instance, nullptr);
+    if (!g_overlay_window) return;
+
+    SetLayeredWindowAttributes(g_overlay_window, RGB(0, 0, 0), 0, LWA_COLORKEY);
+    SetTimer(g_overlay_window, 1, 150, nullptr);
+
+    MSG message{};
+    while (g_running && GetMessageW(&message, nullptr, 0, 0) > 0) {
+        TranslateMessage(&message);
+        DispatchMessageW(&message);
+    }
+
+    DestroyWindow(g_overlay_window);
+    g_overlay_window = nullptr;
+    UnregisterClassW(OVERLAY_CLASS_NAME, instance);
 }
 
 // ============================================================
@@ -703,16 +851,21 @@ void HotkeyThread() {
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
+        g_module_handle = hModule;
         DisableThreadLibraryCalls(hModule);
         InitSpeedhack();
         g_running = true;
         std::thread(WorkerThread).detach();
         std::thread(HotkeyThread).detach();
+        std::thread(OverlayThread).detach();
         break;
     case DLL_PROCESS_DETACH:
         g_running = false;
         g_enabled = false;
         g_doorskip = false;
+        if (const DWORD hotkey_thread_id = g_hotkey_thread_id.load()) {
+            PostThreadMessageW(hotkey_thread_id, WM_QUIT, 0, 0);
+        }
         break;
     }
     return TRUE;
