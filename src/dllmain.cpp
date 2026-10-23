@@ -116,6 +116,7 @@ inline void WriteByte(uintptr_t address, uint8_t value) {
 // ============================================================
 
 constexpr uintptr_t flag_addr             = 0x006D3F64;
+constexpr uintptr_t nods_flag_addr        = 0x006D3F53;
 constexpr uintptr_t system_addr           = 0x006D3E68;
 constexpr uintptr_t cutscene_real_addr    = 0x006D3EB0;
 constexpr uintptr_t door_anim_addr        = 0x0067B8A8;
@@ -135,6 +136,7 @@ constexpr uintptr_t flag_reja             = 0x006DC09B;
 constexpr uintptr_t flag_colision_reja    = 0x006DD930;
 constexpr uintptr_t flag_caja             = 0x006D5B2D;
 constexpr uintptr_t timer_addr            = 0x006DD8F4;
+constexpr uintptr_t prev_room_addr         = 0x006DD0BC;
 
 // ============================================================
 // State
@@ -229,15 +231,22 @@ void SkipCutsceneLogic() {
     if (!g_enabled) return;
 
     uint8_t flag = ReadByte(flag_addr);
+    uint8_t nods_flag = ReadByte(nods_flag_addr);
     uint8_t sys = ReadByte(system_addr);
     uint8_t real = ReadByte(cutscene_real_addr);
     uint16_t room_id = ReadSmallInteger(room_addr);
+    uint16_t prev_room_id = ReadSmallInteger(prev_room_addr);
     uint8_t crane_init = ReadByte(flag_crane);
     uint16_t action_done = ReadSmallInteger(flag_action_done);
     uint8_t action_done_bis = ReadByte(flag_action_done_bis);
     uint8_t caja_move = ReadByte(flag_caja);
     uint32_t colision = ReadInteger(flag_colision_reja);
     uint8_t puzzle_bat = ReadByte(0x006DD936);
+
+    if (room_id == 0x0600) {
+        timer_enabled = false;
+        SetCutsceneSpeed(1.0f);
+    }
 
     // Reset on room 0
     if (room_id == 0x0000) {
@@ -258,14 +267,26 @@ void SkipCutsceneLogic() {
     // Specific room fixes
     if (room_id == 0x010C && room_10D == 3) {
         WriteByte(0x006DD935, 0x9E);
+        WriteByte(0x006DD9D1, 0x02);
+    }
+    if (room_id == 0x0112 && prev_room_id == 0x0114) {
+        WriteByte(0x006DD936, 0x0D);
     }
     if (room_id == 0x010A && counter_roomset == 0) {
         WriteByte(0x006DD934, 0x60);
         counter_roomset++;
     }
 
-    if ((room_id == 0x050A || room_id == 0x0509) &&
-        (action_done == 0x0012 || action_done == 0x1014 || action_done == 0x1016)) {
+    if ((room_id == 0x050A || room_id == 0x0509 || room_id == 0x050B) &&
+        (action_done == 0x0012 || action_done == 0x1014 || action_done == 0x1016 || action_done == 0x1002 || action_done == 0x0002)) {
+        WriteSmallInteger(flag_action_done, 0x1000);
+    }
+
+    if (room_id == 0x0509 && action_done == 0x1012) {
+        WriteSmallInteger(flag_action_done, 0x1000);
+    }
+
+    if (room_id == 0x050B && action_done == 0x1012) {
         WriteSmallInteger(flag_action_done, 0x1000);
     }
 
@@ -310,15 +331,20 @@ void SkipCutsceneLogic() {
 
     // Timer / speedhack logic (simplified - speedhack needs proper implementation)
     if (room_id == 0x0615 || room_id == 0x0402 || room_id == 0x030C ||
-        room_id == 0x050A || room_id == 0x0509 || room_id == 0x0408 ||
+        room_id == 0x050A || room_id == 0x050B || room_id == 0x0509 ||
         room_id == 0x0614 || room_id == 0x0611 || room_id == 0x0508 ||
-        room_id == 0x0609) {
+        room_id == 0x0408 || room_id == 0x0609) {
 
         bool should_speed = false;
         if (crane_init == 1 ||
             ((room_id == 0x0402 || room_id == 0x030C || room_id == 0x0615) && caja_move == 255) ||
             (((room_id == 0x050A && real != 0) || (room_id == 0x050A && flag == 2) ||
-              (room_id == 0x0509 && real != 0) || (room_id == 0x0509 && flag == 2)) && action_done == 0x0010) ||
+              (room_id == 0x0509 && real != 0) || (room_id == 0x0509 && flag == 2) ||
+              (room_id == 0x050B && real != 0) || (room_id == 0x050B && flag == 2)) && action_done == 0x0010) ||
+            (((room_id == 0x050A && real != 0) || (room_id == 0x050A && flag == 2) ||
+              (room_id == 0x0509 && real != 0) || (room_id == 0x0509 && flag == 2) ||
+              (room_id == 0x050B && real != 0) || (room_id == 0x050B && flag == 2)) && nods_flag == 0) ||
+              
             ((room_id == 0x0408 || room_id == 0x0609) && action_done_bis == 4) ||
             (room_id == 0x0614 && real != 0) ||
             (room_id == 0x0508 && action_done_bis == 6) ||
@@ -370,6 +396,7 @@ void SkipCutsceneLogic() {
             if (room_10F == 0 && puzzle_bat == 5) {
                 skip_allow = true;
                 WriteByte(0x006DD936, 0x05);
+                WriteByte(0x006DD937, 0x02);
             }
         }
         if (room_id == 0x0304) skip_allow = true;
