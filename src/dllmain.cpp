@@ -13,11 +13,26 @@
 // Speedhack
 // ============================================================
 
-static std::atomic<float> g_speed{1.0f};
 static std::atomic<float> g_cutscene_speed{1.0f};
 static std::atomic<float> g_doorskip_speed{1.0f};
-static DWORD g_baseTime = 0;
-static LARGE_INTEGER g_baseQPC = {0};
+static SRWLOCK g_speed_lock = SRWLOCK_INIT;
+
+struct ScaledTimeGetTime {
+    DWORD real_base = 0;
+    double scaled_base = 0.0;
+    float multiplier = 1.0f;
+    bool initialized = false;
+};
+
+struct ScaledPerformanceCounter {
+    LONGLONG real_base = 0;
+    double scaled_base = 0.0;
+    float multiplier = 1.0f;
+    bool initialized = false;
+};
+
+static ScaledTimeGetTime g_scaled_time;
+static ScaledPerformanceCounter g_scaled_qpc;
 
 typedef DWORD (WINAPI* timeGetTime_t)();
 typedef BOOL (WINAPI* QPC_t)(LARGE_INTEGER*);
@@ -26,19 +41,75 @@ static timeGetTime_t o_timeGetTime = nullptr;
 static QPC_t o_QueryPerformanceCounter = nullptr;
 
 DWORD WINAPI hk_timeGetTime() {
-    DWORD now = o_timeGetTime();
-    if (g_baseTime == 0) g_baseTime = now;
-    return g_baseTime + static_cast<DWORD>((now - g_baseTime) * g_speed.load());
+    AcquireSRWLockExclusive(&g_speed_lock);
+    const DWORD now = o_timeGetTime();
+    if (!g_scaled_time.initialized) {
+        g_scaled_time.real_base = now;
+        g_scaled_time.scaled_base = now;
+        g_scaled_time.initialized = true;
+    }
+    const DWORD elapsed = now - g_scaled_time.real_base;
+    const DWORD scaled_now = static_cast<DWORD>(g_scaled_time.scaled_base +
+        elapsed * g_scaled_time.multiplier);
+    ReleaseSRWLockExclusive(&g_speed_lock);
+    return scaled_now;
 }
 
 BOOL WINAPI hk_QueryPerformanceCounter(LARGE_INTEGER* lp) {
-    BOOL ok = o_QueryPerformanceCounter(lp);
-    if (!ok) return ok;
-    if (g_baseQPC.QuadPart == 0) g_baseQPC = *lp;
-
-    LONGLONG delta = lp->QuadPart - g_baseQPC.QuadPart;
-    lp->QuadPart = g_baseQPC.QuadPart + static_cast<LONGLONG>(delta * g_speed.load());
+    if (!lp) return FALSE;
+    AcquireSRWLockExclusive(&g_speed_lock);
+    LARGE_INTEGER real_now{};
+    const BOOL ok = o_QueryPerformanceCounter(&real_now);
+    if (!ok) {
+        ReleaseSRWLockExclusive(&g_speed_lock);
+        return FALSE;
+    }
+    if (!g_scaled_qpc.initialized) {
+        g_scaled_qpc.real_base = real_now.QuadPart;
+        g_scaled_qpc.scaled_base = static_cast<double>(real_now.QuadPart);
+        g_scaled_qpc.initialized = true;
+    }
+    const LONGLONG elapsed = real_now.QuadPart - g_scaled_qpc.real_base;
+    lp->QuadPart = static_cast<LONGLONG>(g_scaled_qpc.scaled_base +
+        elapsed * g_scaled_qpc.multiplier);
+    ReleaseSRWLockExclusive(&g_speed_lock);
     return TRUE;
+}
+
+void ApplySpeedMultiplier(float multiplier) {
+    AcquireSRWLockExclusive(&g_speed_lock);
+
+    if (o_timeGetTime) {
+        const DWORD now = o_timeGetTime();
+        if (!g_scaled_time.initialized) {
+            g_scaled_time.real_base = now;
+            g_scaled_time.scaled_base = now;
+            g_scaled_time.initialized = true;
+        } else {
+            const DWORD elapsed = now - g_scaled_time.real_base;
+            g_scaled_time.scaled_base += elapsed * g_scaled_time.multiplier;
+            g_scaled_time.real_base = now;
+        }
+        g_scaled_time.multiplier = multiplier;
+    }
+
+    if (o_QueryPerformanceCounter) {
+        LARGE_INTEGER now{};
+        if (o_QueryPerformanceCounter(&now)) {
+            if (!g_scaled_qpc.initialized) {
+                g_scaled_qpc.real_base = now.QuadPart;
+                g_scaled_qpc.scaled_base = static_cast<double>(now.QuadPart);
+                g_scaled_qpc.initialized = true;
+            } else {
+                const LONGLONG elapsed = now.QuadPart - g_scaled_qpc.real_base;
+                g_scaled_qpc.scaled_base += elapsed * g_scaled_qpc.multiplier;
+                g_scaled_qpc.real_base = now.QuadPart;
+            }
+            g_scaled_qpc.multiplier = multiplier;
+        }
+    }
+
+    ReleaseSRWLockExclusive(&g_speed_lock);
 }
 
 void InitSpeedhack() {
@@ -51,11 +122,11 @@ void InitSpeedhack() {
 }
 
 void SetGameSpeed(float multiplier) {
-    g_speed = multiplier;
+    ApplySpeedMultiplier(multiplier);
 }
 
 void RefreshGameSpeed() {
-    g_speed = (std::max)(g_cutscene_speed.load(), g_doorskip_speed.load());
+    ApplySpeedMultiplier((std::max)(g_cutscene_speed.load(), g_doorskip_speed.load()));
 }
 
 void SetCutsceneSpeed(float multiplier) {
@@ -137,6 +208,7 @@ constexpr uintptr_t flag_colision_reja    = 0x006DD930;
 constexpr uintptr_t flag_caja             = 0x006D5B2D;
 constexpr uintptr_t timer_addr            = 0x006DD8F4;
 constexpr uintptr_t prev_room_addr         = 0x006DD0BC;
+constexpr uintptr_t puzzle_bat_addr        = 0x006DD936;
 
 // ============================================================
 // State
@@ -147,6 +219,7 @@ static std::atomic<bool> g_enabled{false};
 static std::atomic<bool> g_doorskip{false};
 static std::atomic<bool> g_f2_pressed{false};
 static std::atomic<bool> g_f11_pressed{false};
+static std::atomic<bool> g_ctrl_s_pressed{false};
 static std::atomic<DWORD> g_hotkey_thread_id{0};
 static HMODULE g_module_handle = nullptr;
 
@@ -200,6 +273,12 @@ static uint32_t real_time_start = 0;
 static constexpr int timer_units_per_second = 60;
 static constexpr float speedhack_multiplier = 5000.0f;
 
+// Per-attempt ID and elapsed time for the on-screen status display.
+static std::atomic<uint64_t> g_run_session_id{0};
+static std::atomic<uint64_t> g_run_elapsed_ms{0};
+static ULONGLONG g_run_started_at = 0;
+static bool g_run_session_active = false;
+
 // Puzzle rooms (from original script)
 static const std::unordered_map<uint16_t, bool> PUZZLE_ROOMS = {
     {0x010F, true}, {0x0202, true}, {0x030B, true}, {0x0106, true},
@@ -223,6 +302,37 @@ inline uint32_t GetTickCountSafe() {
     return GetTickCount();
 }
 
+uint64_t CreateRunSessionId() {
+    return (static_cast<uint64_t>(GetTickCount64()) << 32) |
+        (static_cast<uint64_t>(GetCurrentProcessId()) << 16) | GetCurrentThreadId();
+}
+
+void StartRunSession() {
+    g_run_session_id = CreateRunSessionId();
+    g_run_started_at = GetTickCount64();
+    g_run_elapsed_ms = 0;
+    g_run_session_active = true;
+}
+
+void FinishRunSession() {
+    if (!g_run_session_active) return;
+    g_run_elapsed_ms = GetTickCount64() - g_run_started_at;
+    g_run_session_active = false;
+}
+
+void UpdateRunSession(uint16_t room) {
+    if (room == 0) {
+        FinishRunSession();
+        return;
+    }
+    if (!g_run_session_active) {
+        StartRunSession();
+        return;
+    }
+
+    g_run_elapsed_ms = GetTickCount64() - g_run_started_at;
+}
+
 // ============================================================
 // Main logic
 // ============================================================
@@ -241,7 +351,7 @@ void SkipCutsceneLogic() {
     uint8_t action_done_bis = ReadByte(flag_action_done_bis);
     uint8_t caja_move = ReadByte(flag_caja);
     uint32_t colision = ReadInteger(flag_colision_reja);
-    uint8_t puzzle_bat = ReadByte(0x006DD936);
+    uint8_t puzzle_bat = ReadByte(puzzle_bat_addr);
 
     if (room_id == 0x0600) {
         timer_enabled = false;
@@ -305,6 +415,10 @@ void SkipCutsceneLogic() {
         WriteBytes(flag_colision_reja, data, 4);
     }
 
+    if (room_id == 0x010D && puzzle_bat == 0x0D) {
+        WriteByte(puzzle_bat_addr, 0x0F);
+    }
+
     if (room_id == 0x0307) {
         const uint8_t data[] = {0x00, 0x3A, 0x5F, 0x71};
         WriteBytes(flag_colision_reja, data, 4);
@@ -327,6 +441,13 @@ void SkipCutsceneLogic() {
 
     if (room_id == 0x0309 && room_309 == 0) {
         teleport_after_cutscene = true;
+    }
+
+    if (room_id == 0x0203 && room_202 != 0) {
+        const uint8_t data[] = {0x74};
+        const uint8_t data2[] = {0x1B};
+        WriteBytes(0x006DD933, data, 1);
+        WriteBytes(0x006DD94E, data2, 1);
     }
 
     // Timer / speedhack logic (simplified - speedhack needs proper implementation)
@@ -358,21 +479,22 @@ void SkipCutsceneLogic() {
                 timer_start_value = ReadInteger(timer_addr);
                 real_time_start = GetTickCountSafe();
             }
-            SetCutsceneSpeed(speedhack_multiplier);
+            bool apply_cutscene_speed = true;
             if (room_id == 0x0508 && action_done_bis == 6) {
                 if (puzzle_cicle < 4) {
                     puzzle_cicle++;
                 } else {
-                    SetCutsceneSpeed(1.0f);
+                    apply_cutscene_speed = false;
                 }
             }
             if (room_id == 0x0609 && action_done_bis == 4) {
                 if (puzzle_cicle < 6) {
                     puzzle_cicle++;
                 } else {
-                    SetCutsceneSpeed(1.0f);
+                    apply_cutscene_speed = false;
                 }
             }
+            SetCutsceneSpeed(apply_cutscene_speed ? speedhack_multiplier : 1.0f);
         } else {
             if (timer_enabled) {
                 uint32_t elapsed_real_ms = GetTickCountSafe() - real_time_start;
@@ -432,7 +554,7 @@ void SkipCutsceneLogic() {
             WriteBytes(flag_colision_reja, data, 4);
         }
         if (room_id == 0x060F) skip_allow = true;
-        if (room_id == 0x0610 && room_610 == 0) skip_allow = true;
+        if (room_id == 0x0610) skip_allow = true;
         if (room_id == 0x0307) special_skip_allow = true;
         if (room_id == 0x0409) teleport_after_cutscene = true;
         if (room_id == 0x030E && room_30E == 0) teleport_after_cutscene = true;
@@ -455,6 +577,7 @@ void SkipCutsceneLogic() {
                 const uint8_t data[] = {0x00, 0x00, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04};
                 WriteBytes(key_item_addr, data, 9);
             }
+
             if (room_id == 0x050E) {
                 const uint8_t data[] = {0x00, 0x60, 0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00};
                 WriteBytes(key_item_addr, data, 9);
@@ -462,6 +585,12 @@ void SkipCutsceneLogic() {
             if (room_id == 0x0610 && room_610 == 0) {
                 const uint8_t data[] = {0x00, 0x20, 0x1D, 0x04, 0x00, 0x10, 0x01, 0x00, 0x00};
                 WriteBytes(key_item_addr, data, 9);
+            }
+            if (room_id == 0x0610 && room_610 == 1) {
+                const uint8_t data[] = {0x00, 0x20, 0x1D, 0x04, 0x00, 0x00, 0x01, 0x00, 0x00};
+                WriteBytes(key_item_addr, data, 9);
+                const uint8_t data2[] = {0xB3};
+                WriteBytes(0x006DD947, data2, 1);
             }
 
             if (room_id == 0x0304) {
@@ -705,6 +834,7 @@ void ProcessDoorSkip() {
 
 void WorkerThread() {
     while (g_running) {
+        UpdateRunSession(ReadSmallInteger(room_addr));
         if (g_enabled) {
             SkipCutsceneLogic();
         } else {
@@ -714,6 +844,7 @@ void WorkerThread() {
         ProcessDoorSkip();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+    FinishRunSession();
 }
 
 void HotkeyThread() {
@@ -744,6 +875,14 @@ void HotkeyThread() {
                         if (!enable_doorskip) {
                             SetDoorSkipSpeed(1.0f);
                         }
+                    }
+                } else if (key->vkCode == 'S') {
+                    if (key_up) {
+                        g_ctrl_s_pressed = false;
+                    } else if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0 &&
+                        !g_ctrl_s_pressed.exchange(true)) {
+                        const uint8_t save_state_data[] = {0x07, 0x00, 0x00, 0x00, 0x00};
+                        WriteBytes(system_addr, save_state_data, sizeof(save_state_data));
                     }
                 }
             }
@@ -792,22 +931,21 @@ LRESULT CALLBACK OverlayWindowProc(HWND window, UINT message, WPARAM w_param, LP
         }
         HWND game_window = nullptr;
         EnumWindows(FindGameWindowCallback, reinterpret_cast<LPARAM>(&game_window));
-        HWND foreground_window = GetForegroundWindow();
-        DWORD foreground_process_id = 0;
-        if (foreground_window) {
-            GetWindowThreadProcessId(foreground_window, &foreground_process_id);
-        }
-        if (!game_window || IsIconic(game_window) || !IsWindowVisible(game_window) ||
-            foreground_process_id != GetCurrentProcessId()) {
+        if (!game_window || IsIconic(game_window) || !IsWindowVisible(game_window)) {
             ShowWindow(window, SW_HIDE);
             return 0;
         }
 
+        if (reinterpret_cast<HWND>(GetWindowLongPtrW(window, GWLP_HWNDPARENT)) != game_window) {
+            SetWindowLongPtrW(window, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(game_window));
+        }
+
         POINT client_origin{0, 0};
         if (ClientToScreen(game_window, &client_origin)) {
-            SetWindowPos(window, HWND_TOPMOST, client_origin.x + 12, client_origin.y + 12,
-                0, 0, SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+            SetWindowPos(window, nullptr, client_origin.x + 12, client_origin.y + 12,
+                0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         }
+        ShowWindow(window, SW_SHOWNOACTIVATE);
         InvalidateRect(window, nullptr, TRUE);
         return 0;
     }
@@ -821,13 +959,29 @@ LRESULT CALLBACK OverlayWindowProc(HWND window, UINT message, WPARAM w_param, LP
             ANTIALIASED_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
         HGDIOBJ previous_font = SelectObject(dc, font);
 
+        wchar_t run_status[96]{};
+        const uint64_t session_id = g_run_session_id.load();
+        const uint64_t elapsed_ms = g_run_elapsed_ms.load();
+        const uint64_t elapsed_seconds = elapsed_ms / 1000;
+        if (session_id == 0) {
+            wcscpy_s(run_status, L"RUN: waiting for gameplay");
+        } else {
+            swprintf_s(run_status, _countof(run_status), L"RUN: %016llX  %02llu:%02llu:%02llu.%03llu",
+                static_cast<unsigned long long>(session_id),
+                static_cast<unsigned long long>(elapsed_seconds / 3600),
+                static_cast<unsigned long long>((elapsed_seconds / 60) % 60),
+                static_cast<unsigned long long>(elapsed_seconds % 60),
+                static_cast<unsigned long long>(elapsed_ms % 1000));
+        }
+        SetTextColor(dc, RGB(255, 220, 100));
+        TextOutW(dc, 0, 0, run_status, static_cast<int>(wcslen(run_status)));
+
         SetTextColor(dc, g_enabled.load() ? RGB(80, 255, 120) : RGB(190, 190, 190));
-        TextOutW(dc, 0, 0, g_enabled.load() ? L"CUTSCENE SKIP: ON" : L"CUTSCENE SKIP: OFF",
+        TextOutW(dc, 0, 22, g_enabled.load() ? L"CUTSCENE SKIP: ON" : L"CUTSCENE SKIP: OFF",
             g_enabled.load() ? 17 : 18);
         SetTextColor(dc, g_doorskip.load() ? RGB(80, 255, 120) : RGB(190, 190, 190));
-        TextOutW(dc, 0, 22, g_doorskip.load() ? L"DOORSKIP: ON" : L"DOORSKIP: OFF",
+        TextOutW(dc, 0, 44, g_doorskip.load() ? L"DOORSKIP: ON" : L"DOORSKIP: OFF",
             g_doorskip.load() ? 12 : 13);
-
         SelectObject(dc, previous_font);
         DeleteObject(font);
         EndPaint(window, &paint);
@@ -852,9 +1006,9 @@ void OverlayThread() {
     RegisterClassExW(&window_class);
 
     g_overlay_window = CreateWindowExW(
-        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_TOPMOST | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_APPWINDOW | WS_EX_NOACTIVATE,
         OVERLAY_CLASS_NAME, L"Dino Crisis skip status", WS_POPUP,
-        0, 0, 260, 48, nullptr, nullptr, instance, nullptr);
+        0, 0, 400, 64, nullptr, nullptr, instance, nullptr);
     if (!g_overlay_window) return;
 
     SetLayeredWindowAttributes(g_overlay_window, RGB(0, 0, 0), 0, LWA_COLORKEY);

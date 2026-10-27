@@ -11,6 +11,7 @@ This project migrates the cutscene-skipping logic from the original Cheat Engine
 - **Cutscene Skip:** Skip supported cutscenes instead of relying on partial animation speed-ups whenever possible.
 - **Door Skip:** Reduce waiting time during door transitions.
 - **Hotkey controls:** Toggle each feature independently while playing.
+- **Run marker:** Show a per-attempt ID and elapsed real time in the on-screen status display.
 - **Native ASI integration:** Load the functionality through an ASI loader without running Cheat Engine in the background.
 - **C++ implementation:** A native plugin built with CMake and MinHook.
 
@@ -24,6 +25,10 @@ The goal remains the same as the original project: minimize unnecessary waiting 
 | `F11` | Toggle Door Skip |
 
 Both features start disabled and can be enabled independently.
+
+## Run marker
+
+The on-screen status display shows a session ID and elapsed real time while gameplay is active. No run log or CSV file is created.
 
 ## Installation
 
